@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM Enterprise - Billing Software</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .view {
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        .modal-overlay {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .modal-box {
+            transition: transform 0.3s ease-in-out;
+        }
+        .pdf-render-area {
+            background-color: white !important;
+        }
+        .pdf-render-area input, .pdf-render-area textarea {
+            border: 1px solid transparent !important;
+            -webkit-print-color-adjust: exact;
+            color-adjust: exact;
+        }
+        .pdf-render-area .no-print {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-6 lg:p-8">
+
+    <!-- Auth View -->
+    <div id="auth-view" class="view">
+        <div class="max-w-md mx-auto mt-10">
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-slate-800">Welcome to RM Enterprise</h1>
+                    <p class="text-slate-500">Sign in or create an account to continue</p>
+                </div>
+                <div id="auth-container">
+                    <!-- Login Form -->
+                    <form id="login-form" class="space-y-4">
+                        <input type="email" id="login-email" placeholder="Email" class="w-full p-3 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <input type="password" id="login-password" placeholder="Password" class="w-full p-3 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg">Login</button>
+                    </form>
+                    <p class="text-center text-sm text-slate-500 mt-4">
+                        Don't have an account? <a href="#" id="show-signup" class="font-semibold text-indigo-600 hover:underline">Sign up</a>
+                    </p>
+                </div>
+                 <div id="signup-container" class="hidden">
+                    <!-- Signup Form -->
+                    <form id="signup-form" class="space-y-4">
+                        <input type="email" id="signup-email" placeholder="Email" class="w-full p-3 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <input type="password" id="signup-password" placeholder="Password" class="w-full p-3 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" required>
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg">Sign Up</button>
+                    </form>
+                    <p class="text-center text-sm text-slate-500 mt-4">
+                        Already have an account? <a href="#" id="show-login" class="font-semibold text-indigo-600 hover:underline">Log in</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App View (Invoice + Dashboard) -->
+    <div id="app-view" class="view hidden">
+        <!-- Main Invoice View -->
+        <div id="main-view" class="main-view">
+             <div class="flex justify-end mb-4">
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 shadow-md">Logout</button>
+            </div>
+            <div class="max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-6 sm:p-10 invoice-box">
+                <!-- Header -->
+                <header class="grid grid-cols-2 sm:grid-cols-3 gap-8 mb-10">
+                    <div class="flex items-center">
+                         <div class="bg-slate-100 p-3 rounded-lg mr-4">
+                            <svg class="w-8 h-8 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4M4 7v4c0 2.21 3.582 4 8 4s8-1.79 8-4V7"></path></svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold text-slate-800">RM Enterprise</h1>
+                            <p class="text-sm text-slate-500">100/103 Nowabpur Hazi Samsull Islam Tower, Dhaka</p>
+                            <p class="text-sm text-slate-500">Phone: 01728205156, 01707966115</p>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2 text-right">
+                        <h2 class="text-4xl font-extrabold text-slate-800 tracking-tight">INVOICE</h2>
+                        <div class="flex items-center justify-end mt-2">
+                            <span class="font-semibold text-slate-600 mr-2">Invoice #:</span>
+                            <input type="text" id="invoice-no" class="w-36 p-2 border rounded-lg text-right text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" value="INV-001">
+                        </div>
+                        <div class="flex items-center justify-end mt-2">
+                            <span class="font-semibold text-slate-600 mr-2">Date:</span>
+                            <input type="date" id="invoice-date" class="w-36 p-2 border rounded-lg text-right text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Bill To Section -->
+                <div class="mb-10">
+                    <h3 class="text-base font-semibold text-slate-500 border-b pb-2 mb-4 uppercase tracking-wider">Bill To</h3>
+                    <input type="text" id="customer-name" placeholder="Customer Name" class="w-full p-2 border rounded-lg mb-2 text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <textarea id="customer-address" placeholder="Customer Address" class="w-full p-2 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none" rows="2"></textarea>
+                </div>
+
+                <!-- Items Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse table-fixed" id="items-table">
+                        <thead class="bg-slate-50">
+                            <tr class="text-slate-600 uppercase text-sm">
+                                <th class="p-3 font-semibold w-[5%]">SL</th>
+                                <th class="p-3 font-semibold w-[15%]">Delivery Date</th>
+                                <th class="p-3 font-semibold w-[35%]">Description</th>
+                                <th class="p-3 font-semibold w-[10%] text-center">Qty</th>
+                                <th class="p-3 font-semibold w-[15%] text-right">Unit Price</th>
+                                <th class="p-3 font-semibold w-[15%] text-right">Amount</th>
+                                <th class="p-3 font-semibold no-print w-[5%]"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <button id="add-row" class="mt-6 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 no-print shadow-md hover:shadow-lg">
+                    + Add Item
+                </button>
+
+                <!-- Totals Section -->
+                <div class="flex flex-col md:flex-row justify-between items-start mt-10 gap-8">
+                     <div class="w-full md:w-1/2">
+                        <h3 class="text-base font-semibold text-slate-500 uppercase tracking-wider mb-2">Amount in Words</h3>
+                        <p id="amount-in-words" class="text-slate-600 italic text-sm"></p>
+                    </div>
+                    <div class="w-full md:w-1/3">
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center"><span class="text-slate-500 font-medium">Subtotal:</span><span id="subtotal" class="text-slate-700 font-bold">৳ 0.00</span></div>
+                            <div class="flex justify-between items-center"><span class="text-slate-500 font-medium">Tax (%):</span><input type="number" id="tax" value="0" class="w-24 p-2 border rounded-lg text-right text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                             <div class="flex justify-between items-center"><span class="text-slate-500 font-medium">Discount:</span><input type="number" id="discount" value="0" class="w-24 p-2 border rounded-lg text-right text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                            <div class="flex justify-between items-center"><span class="text-slate-500 font-medium">Previous Due:</span><input type="number" id="previous-due" value="0" class="w-24 p-2 border rounded-lg text-right text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                            <hr class="my-3 border-slate-200">
+                            <div class="flex justify-between items-center bg-slate-100 p-3 rounded-lg"><span class="text-xl font-bold text-slate-800">Total Amount:</span><span id="total" class="text-xl font-bold text-slate-800">৳ 0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <footer class="mt-12 text-center text-slate-500 no-print"><p>Thank you for your business!</p></footer>
+            </div>
+            <div class="flex justify-center items-center space-x-4 mt-8 no-print">
+                 <button id="save-invoice" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Save & New</button>
+                <button id="save-pdf-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Save as PDF</button>
+                <button id="view-dashboard-btn" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">View Dashboard</button>
+            </div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div id="dashboard-view" class="dashboard-view hidden">
+             <div class="max-w-7xl mx-auto">
+                <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+                    <h1 class="text-4xl font-bold text-slate-800 mb-4 sm:mb-0">Receipts Dashboard</h1>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex items-center bg-white p-2 rounded-lg shadow"><label for="export-date" class="mr-2 text-slate-600 font-semibold">Export Date:</label><input type="date" id="export-date" class="p-2 border-0 rounded-md bg-slate-50 text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                        <button id="export-excel" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-5 rounded-lg transition duration-300 shadow-md hover:shadow-lg">Export to Excel</button>
+                        <button id="back-to-invoice" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-5 rounded-lg transition duration-300 shadow-md hover:shadow-lg">Back to Invoice</button>
+                    </div>
+                </header>
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <table class="w-full text-left" id="receipts-table"><thead class="bg-slate-50"><tr class="text-slate-600 uppercase text-sm"><th class="p-4 font-semibold">Invoice #</th><th class="p-4 font-semibold">Date</th><th class="p-4 font-semibold">Customer Name</th><th class="p-4 font-semibold text-right">Total Amount (BDT)</th><th class="p-4 font-semibold text-center">Actions</th></tr></thead><tbody class="divide-y divide-slate-200"></tbody></table>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="modal-box bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 text-center transform scale-95">
+            <h3 id="modal-title" class="text-2xl font-bold text-slate-800 mb-4">Confirm Deletion</h3>
+            <p id="modal-message" class="text-slate-600 mb-8">Are you sure you want to delete this invoice? This action cannot be undone.</p>
+            <div class="flex justify-center gap-4">
+                <button id="modal-cancel" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 px-8 rounded-lg transition duration-300">Cancel</button>
+                <button id="modal-confirm" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-lg transition duration-300">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore,
+            doc,
+            setDoc,
+            getDoc,
+            deleteDoc,
+            collection,
+            onSnapshot,
+            query,
+            orderBy
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- IMPORTANT: PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // ----------------------------------------------------
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- DOM Elements ---
+        const authView = document.getElementById('auth-view');
+        const appView = document.getElementById('app-view');
+        const mainView = document.getElementById('main-view');
+        const dashboardView = document.getElementById('dashboard-view');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const showSignupBtn = document.getElementById('show-signup');
+        const showLoginBtn = document.getElementById('show-login');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        const itemsTableBody = document.querySelector('#items-table tbody');
+        const addRowBtn = document.getElementById('add-row');
+        const subtotalEl = document.getElementById('subtotal');
+        const totalEl = document.getElementById('total');
+        const taxInput = document.getElementById('tax');
+        const discountInput = document.getElementById('discount');
+        const previousDueInput = document.getElementById('previous-due');
+        const amountInWordsEl = document.getElementById('amount-in-words');
+        const saveInvoiceBtn = document.getElementById('save-invoice');
+        const savePdfBtn = document.getElementById('save-pdf-btn');
+        const viewDashboardBtn = document.getElementById('view-dashboard-btn');
+        const backToInvoiceBtn = document.getElementById('back-to-invoice');
+        const receiptsTableBody = document.querySelector('#receipts-table tbody');
+        const exportExcelBtn = document.getElementById('export-excel');
+        const exportDateInput = document.getElementById('export-date');
+        const modal = document.getElementById('custom-modal');
+        const modalConfirmBtn = document.getElementById('modal-confirm');
+        const modalCancelBtn = document.getElementById('modal-cancel');
+        
+        let itemCounter = 0;
+        let resolveConfirm;
+        let currentUser = null;
+        let unsubscribeInvoices = null;
+
+        // --- Auth Logic ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                authView.classList.add('hidden');
+                appView.classList.remove('hidden');
+                resetForm();
+                listenForInvoices();
+            } else {
+                currentUser = null;
+                authView.classList.remove('hidden');
+                appView.classList.add('hidden');
+                if(unsubscribeInvoices) unsubscribeInvoices();
+            }
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            signInWithEmailAndPassword(auth, email, password)
+                .catch(error => showModal('Login Error', error.message));
+        });
+
+        signupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            createUserWithEmailAndPassword(auth, email, password)
+                .catch(error => showModal('Signup Error', error.message));
+        });
+
+        logoutBtn.addEventListener('click', () => signOut(auth));
+
+        showSignupBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('auth-container').classList.add('hidden');
+            document.getElementById('signup-container').classList.remove('hidden');
+        });
+
+        showLoginBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('signup-container').classList.add('hidden');
+            document.getElementById('auth-container').classList.remove('hidden');
+        });
+
+        // --- Utility Functions ---
+        const getTodaysDate = () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+
+        const formatCurrency = (amount) => `৳ ${amount.toFixed(2)}`;
+        
+        const showModal = (title, message) => {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.remove('opacity-0'), 10);
+            return new Promise(resolve => {
+                resolveConfirm = resolve;
+            });
+        };
+
+        const hideModal = () => {
+            modal.classList.add('opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        };
+
+        modalConfirmBtn.onclick = () => { hideModal(); if (resolveConfirm) resolveConfirm(true); };
+        modalCancelBtn.onclick = () => { hideModal(); if (resolveConfirm) resolveConfirm(false); };
+
+        // --- Core Invoice Logic ---
+        const addRow = (item = null) => {
+            itemCounter++;
+            const row = document.createElement('tr');
+            row.classList.add('border-b', 'border-slate-100');
+            row.innerHTML = `<td class="p-3 text-slate-500">${itemCounter}</td><td class="p-3"><input type="date" class="w-full p-2 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none delivery-date" value="${item ? item.deliveryDate : getTodaysDate()}"></td><td class="p-3"><input type="text" placeholder="Item description" class="w-full p-2 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none description" value="${item ? item.description : ''}"></td><td class="p-3"><input type="number" value="${item ? item.quantity : 1}" min="1" class="w-full p-2 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none quantity text-center"></td><td class="p-3"><input type="number" value="${item ? item.unitPrice : 0}" min="0" class="w-full p-2 border rounded-lg text-slate-700 bg-slate-50 focus:ring-2 focus:ring-indigo-500 outline-none unit-price text-right"></td><td class="p-3 text-right amount whitespace-nowrap text-slate-700 font-medium">${formatCurrency(item ? item.amount : 0)}</td><td class="p-3 no-print text-center"><button class="text-red-400 hover:text-red-600 font-bold remove-row">✕</button></td>`;
+            itemsTableBody.appendChild(row);
+        };
+
+        const updateTotals = () => {
+            let subtotal = 0;
+            document.querySelectorAll('#items-table tbody tr').forEach(row => {
+                const amountText = row.querySelector('.amount').textContent;
+                subtotal += parseFloat(amountText.replace('৳', '').replace(/,/g, ''));
+            });
+            subtotalEl.textContent = formatCurrency(subtotal);
+            const taxPercentage = parseFloat(taxInput.value) || 0;
+            const discount = parseFloat(discountInput.value) || 0;
+            const previousDue = parseFloat(previousDueInput.value) || 0;
+            const taxAmount = (subtotal * taxPercentage) / 100;
+            const total = subtotal + taxAmount - discount + previousDue;
+            totalEl.textContent = formatCurrency(total);
+            amountInWordsEl.textContent = numberToWords(total) + " Taka Only";
+        };
+
+        const resetForm = async () => {
+            let lastInvNum = 0;
+            if(unsubscribeInvoices) { // check if listener is active
+                // This part is tricky without fetching all docs. We'll use a simple increment for now.
+                const currentInvNum = parseInt(document.getElementById('invoice-no').value.split('-')[1] || 0);
+                lastInvNum = currentInvNum;
+            }
+            document.getElementById('invoice-no').value = `INV-${String(lastInvNum + 1).padStart(3, '0')}`;
+            document.getElementById('invoice-date').value = getTodaysDate();
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-address').value = '';
+            itemsTableBody.innerHTML = '';
+            itemCounter = 0;
+            taxInput.value = '0';
+            discountInput.value = '0';
+            previousDueInput.value = '0';
+            addRow();
+            updateTotals();
+        };
+
+        // --- Event Listeners for Invoice Form ---
+        itemsTableBody.addEventListener('input', (e) => {
+            if (e.target.classList.contains('quantity') || e.target.classList.contains('unit-price')) {
+                const row = e.target.closest('tr');
+                const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+                const unitPrice = parseFloat(row.querySelector('.unit-price').value) || 0;
+                const amount = quantity * unitPrice;
+                row.querySelector('.amount').textContent = formatCurrency(amount);
+                updateTotals();
+            }
+        });
+        itemsTableBody.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-row')) {
+                e.target.closest('tr').remove();
+                let count = 1;
+                document.querySelectorAll('#items-table tbody tr').forEach(row => {
+                    row.firstElementChild.textContent = count++;
+                });
+                itemCounter = count - 1;
+                updateTotals();
+            }
+        });
+        [taxInput, discountInput, previousDueInput].forEach(input => input.addEventListener('input', updateTotals));
+        addRowBtn.addEventListener('click', () => addRow());
+
+        // --- Firestore & Dashboard Logic ---
+        const getInvoiceDataFromForm = () => {
+             const items = [];
+            document.querySelectorAll('#items-table tbody tr').forEach(row => {
+                items.push({
+                    deliveryDate: row.querySelector('.delivery-date').value,
+                    description: row.querySelector('.description').value,
+                    quantity: parseFloat(row.querySelector('.quantity').value),
+                    unitPrice: parseFloat(row.querySelector('.unit-price').value),
+                    amount: parseFloat(row.querySelector('.amount').textContent.replace('৳', ''))
+                });
+            });
+            return {
+                id: document.getElementById('invoice-no').value,
+                date: document.getElementById('invoice-date').value,
+                customerName: document.getElementById('customer-name').value,
+                customerAddress: document.getElementById('customer-address').value,
+                items: items,
+                subtotal: parseFloat(subtotalEl.textContent.replace('৳', '')),
+                tax: parseFloat(taxInput.value),
+                discount: parseFloat(discountInput.value),
+                previousDue: parseFloat(previousDueInput.value),
+                total: parseFloat(totalEl.textContent.replace('৳', ''))
+            };
+        }
+
+        const saveInvoice = async (silent = false) => {
+            if (!currentUser) return showModal('Error', 'You must be logged in to save.');
+            if (!document.getElementById('customer-name').value) {
+                showModal('Validation Error', 'Please enter a customer name.');
+                return false;
+            }
+            const invoiceData = getInvoiceDataFromForm();
+            const invoiceRef = doc(db, 'users', currentUser.uid, 'invoices', invoiceData.id);
+            try {
+                await setDoc(invoiceRef, invoiceData);
+                if (!silent) {
+                    showModal('Success', `Invoice ${invoiceData.id} saved successfully!`);
+                }
+                return true;
+            } catch (error) {
+                showModal('Error', `Could not save invoice: ${error.message}`);
+                return false;
+            }
+        };
+        
+        const generatePDF = () => {
+            const invoiceElement = document.querySelector('.invoice-box');
+            invoiceElement.classList.add('pdf-render-area');
+            const invoiceNo = document.getElementById('invoice-no').value;
+            const customerName = document.getElementById('customer-name').value.trim() || 'invoice';
+            const fileName = `${invoiceNo}_${customerName.replace(/\s+/g, '_')}.pdf`;
+            html2canvas(invoiceElement, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const imgHeight = canvas.height * (pdfWidth - 20) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth - 20, imgHeight);
+                pdf.save(fileName);
+                invoiceElement.classList.remove('pdf-render-area');
+            });
+        };
+
+        savePdfBtn.addEventListener('click', async () => {
+            if (await saveInvoice(true)) {
+                generatePDF();
+            }
+        });
+
+        const loadInvoice = (invoiceData) => {
+            document.getElementById('invoice-no').value = invoiceData.id;
+            document.getElementById('invoice-date').value = invoiceData.date;
+            document.getElementById('customer-name').value = invoiceData.customerName;
+            document.getElementById('customer-address').value = invoiceData.customerAddress;
+            itemsTableBody.innerHTML = '';
+            itemCounter = 0;
+            invoiceData.items.forEach(item => addRow(item));
+            taxInput.value = invoiceData.tax;
+            discountInput.value = invoiceData.discount;
+            previousDueInput.value = invoiceData.previousDue;
+            updateTotals();
+            switchToView('main');
+        };
+
+        const deleteInvoice = async (id) => {
+            const confirmed = await showModal('Confirm Deletion', `Are you sure you want to delete Invoice ${id}?`);
+            if (confirmed) {
+                const invoiceRef = doc(db, 'users', currentUser.uid, 'invoices', id);
+                await deleteDoc(invoiceRef);
+            }
+        };
+        
+        const downloadPdfFromDashboard = async (id) => {
+            const docRef = doc(db, 'users', currentUser.uid, 'invoices', id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const invoiceToDownload = docSnap.data();
+                const currentFormData = getInvoiceDataFromForm();
+                loadInvoice(invoiceToDownload);
+                generatePDF();
+                setTimeout(() => loadInvoice(currentFormData), 1000);
+            } else {
+                showModal('Error', 'Could not find invoice to download.');
+            }
+        };
+
+        let allInvoices = [];
+        const listenForInvoices = () => {
+            if (unsubscribeInvoices) unsubscribeInvoices();
+            const q = query(collection(db, 'users', currentUser.uid, 'invoices'), orderBy('date', 'desc'));
+            unsubscribeInvoices = onSnapshot(q, (querySnapshot) => {
+                allInvoices = [];
+                receiptsTableBody.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const inv = doc.data();
+                    allInvoices.push(inv);
+                    const row = document.createElement('tr');
+                    row.classList.add('hover:bg-slate-50');
+                    row.innerHTML = `<td class="p-4 text-slate-700 font-medium">${inv.id}</td><td class="p-4 text-slate-500">${inv.date}</td><td class="p-4 text-slate-700">${inv.customerName}</td><td class="p-4 text-slate-800 font-bold text-right">${formatCurrency(inv.total)}</td><td class="p-4 text-center space-x-2"><button class="text-green-600 hover:underline font-semibold download-pdf" data-id="${inv.id}">Download</button><button class="text-indigo-600 hover:underline font-semibold edit-receipt" data-id="${inv.id}">Edit</button><button class="text-red-500 hover:underline font-semibold delete-receipt" data-id="${inv.id}">Delete</button></td>`;
+                    receiptsTableBody.appendChild(row);
+                });
+            });
+        };
+
+        const switchToView = (view) => {
+            if (view === 'dashboard') {
+                exportDateInput.value = getTodaysDate();
+                mainView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+            } else {
+                mainView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+            }
+        };
+        
+        saveInvoiceBtn.addEventListener('click', async () => {
+            if(await saveInvoice()){
+                resetForm();
+            }
+        });
+
+        viewDashboardBtn.addEventListener('click', () => switchToView('dashboard'));
+        backToInvoiceBtn.addEventListener('click', () => switchToView('main'));
+
+        receiptsTableBody.addEventListener('click', e => {
+            const id = e.target.getAttribute('data-id');
+            if (!id) return;
+            if (e.target.classList.contains('edit-receipt')) {
+                const invoiceToEdit = allInvoices.find(inv => inv.id === id);
+                if(invoiceToEdit) loadInvoice(invoiceToEdit);
+            }
+            if (e.target.classList.contains('delete-receipt')) {
+                deleteInvoice(id);
+            }
+            if (e.target.classList.contains('download-pdf')) {
+                downloadPdfFromDashboard(id);
+            }
+        });
+
+        exportExcelBtn.addEventListener('click', () => {
+            const selectedDate = exportDateInput.value;
+            if (!selectedDate) return showModal('Export Error', 'Please select a date to export.');
+            const datedInvoices = allInvoices.filter(inv => inv.date === selectedDate);
+            if (datedInvoices.length === 0) return showModal('No Data', `No sales were recorded on ${selectedDate}.`);
+            const dataForExport = [];
+            datedInvoices.forEach(inv => {
+                inv.items.forEach(item => {
+                    dataForExport.push({
+                        "Invoice #": inv.id, "Date": inv.date, "Customer Name": inv.customerName,
+                        "Item Description": item.description, "Quantity": item.quantity, "Unit Price": item.unitPrice,
+                        "Item Amount": item.amount, "Subtotal": inv.subtotal, "Tax (%)": inv.tax, "Discount (BDT)": inv.discount,
+                        "Previous Due (BDT)": inv.previousDue, "Total (BDT)": inv.total
+                    });
+                });
+            });
+            const worksheet = XLSX.utils.json_to_sheet(dataForExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, `Sales ${selectedDate}`);
+            XLSX.writeFile(workbook, `RM_Enterprise_Sales_${selectedDate}.xlsx`);
+        });
+
+        function numberToWords(num) {
+            if (num === 0) return 'Zero';
+            const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const number = parseFloat(num).toFixed(2).split('.');
+            const taka = parseInt(number[0], 10);
+            const poisha = parseInt(number[1], 10);
+            let words = '';
+            function inWords(n) {
+                let str = '';
+                if (n > 9999999) { str += inWords(Math.floor(n / 10000000)) + ' Crore '; n %= 10000000; }
+                if (n > 99999) { str += inWords(Math.floor(n / 100000)) + ' Lakh '; n %= 100000; }
+                if (n > 999) { str += inWords(Math.floor(n / 1000)) + ' Thousand '; n %= 1000; }
+                if (n > 99) { str += inWords(Math.floor(n / 100)) + ' Hundred '; n %= 100; }
+                if (n > 19) { str += b[Math.floor(n / 10)] + ' ' + a[n % 10]; } else { str += a[n]; }
+                return str.trim();
+            }
+            words = inWords(taka);
+            if (poisha > 0) {
+                words += ' and ' + inWords(poisha) + ' Poisha';
+            }
+            return words.replace(/\s+/g, ' ');
+        }
+    </script>
+</body>
+</html>
